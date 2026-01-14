@@ -1,174 +1,133 @@
 # Claude Conductor
 
-Distribute work across multiple Claude Code sessions using filesystem-based task queues.
+Launch multiple Claude Code sessions in tmux. One command, N parallel tasks.
 
-## How It Works
+## Installation
 
-Queue structure at `~/.claude-code/orchestrator/workers/`:
-
+```bash
+git clone https://github.com/brittonhayes/claude-conductor
+cd claude-conductor
+./bin/launch -h
 ```
-├── 0/
-│   ├── task.json      # Work to do
-│   ├── status.json    # idle|working|done|error
-│   ├── result.json    # Output
-│   └── .lock/         # Mutex with PID
-├── 1/
-└── 2/
-```
-
-Components:
-
-- `bin/orchestrator` - Assigns tasks, polls status, aggregates results
-- `bin/worker` - Watches for tasks, executes them, writes results
-- `conductor/queue.py` - Queue management library
-- `bin/launch` - Creates tmux session with orchestrator + workers
 
 ## Usage
 
-### Launch with tmux
+### Basic - From Command Line
 
 ```bash
-./bin/launch --workers 3
+./bin/launch "Review auth.py for bugs" "Run all tests" "Check for TODOs"
 ```
 
-Creates a session with orchestrator and workers in separate panes. In the orchestrator pane, use Claude Code normally.
+Creates a tmux session with 3 panes, each running a Claude Code session with the given prompt.
 
-### Programmatic
-
-```python
-from conductor.queue import Orchestrator
-
-orch = Orchestrator(3)
-
-# Parallel
-results = orch.execute_tasks([
-    {'prompt': 'Review auth.py'},
-    {'prompt': 'Review db.py'},
-    {'prompt': 'Review api.py'}
-])
-
-# Sequential
-results = orch.execute_sequential([
-    {'prompt': 'Build project', 'stopOnError': True},
-    {'prompt': 'Run tests', 'stopOnError': True},
-    {'prompt': 'Deploy'}
-])
-
-orch.shutdown()
-```
-
-### Manual
+### From File
 
 ```bash
-# Start workers
-./bin/worker 0 .
-./bin/worker 1 .
-./bin/worker 2 .
+cat > tasks.txt <<EOF
+Review all Python files for security issues
+Run the test suite and fix any failures
+Update documentation for new API endpoints
+EOF
 
-# Start orchestrator
-./bin/orchestrator 3
+./bin/launch -f tasks.txt
 ```
+
+### From Stdin
+
+```bash
+echo "Explain how the authentication system works" | ./bin/launch -f -
+```
+
+### With Git Worktrees
+
+Isolate changes from each task in separate worktrees:
+
+```bash
+./bin/launch -w \
+  "Refactor auth module" \
+  "Add new API endpoint" \
+  "Fix bug #123"
+```
+
+Each task runs in `~/.conductor-work/task-N/` with an isolated git worktree.
 
 ## Options
 
-```bash
-./bin/launch [options]
-
--w, --workers NUM   Number of workers (default: 3)
--n, --name NAME     Session name (default: conductor)
---worktrees         Use git worktrees for isolated worker directories
--d, --dir DIR       Base directory (default: ~/conductor-work)
 ```
-
-## Requirements
-
-- Python 3.6+
-- Bash
-- `jq`
-
-Optional (for file watching instead of polling):
-- `inotify-tools` (Linux)
-- `fswatch` (macOS)
-
-```bash
-# Linux
-sudo apt-get install jq inotify-tools
-
-# macOS
-brew install jq fswatch
+-f FILE    Read tasks from file (one per line, or - for stdin)
+-n NAME    Session name (default: conductor)
+-w         Use git worktrees (isolate changes per task)
+-d DIR     Work directory for worktrees (default: ~/.conductor-work)
+-h         Show help
 ```
 
 ## Examples
 
-Parallel code review:
-
-```python
-from pathlib import Path
-from conductor.queue import Orchestrator
-
-orch = Orchestrator(3)
-
-files = list(Path('src').rglob('*.py'))
-tasks = [{'prompt': f'Review {f} for bugs'} for f in files]
-
-results = orch.execute_tasks(tasks)
-
-for r in results:
-    print(f"{r['task']['prompt']}: {r['result']['output']}")
-
-orch.shutdown()
+**Parallel code review:**
+```bash
+./bin/launch -w \
+  "Review pkg/auth/*.go for security issues" \
+  "Review pkg/api/*.go for error handling" \
+  "Review pkg/db/*.go for SQL injection risks"
 ```
 
-Parallel testing:
-
-```python
-orch = Orchestrator(4)
-
-suites = ['unit', 'integration', 'e2e', 'performance']
-tasks = [{'prompt': f'Run {s} tests'} for s in suites]
-
-results = orch.execute_tasks(tasks)
-orch.shutdown()
+**Test different modules:**
+```bash
+./bin/launch \
+  "Run unit tests for auth package" \
+  "Run integration tests for API" \
+  "Run e2e tests"
 ```
 
-Sequential pipeline:
-
-```python
-orch = Orchestrator(3)
-
-orch.execute_sequential([
-    {'prompt': 'npm install', 'stopOnError': True},
-    {'prompt': 'npm run build', 'stopOnError': True},
-    {'prompt': 'npm test', 'stopOnError': True}
-])
-
-orch.shutdown()
+**Research tasks:**
+```bash
+./bin/launch \
+  "Find all TODO comments and summarize them" \
+  "List all external dependencies and their versions" \
+  "Check for outdated npm packages"
 ```
 
-## Debugging
+## How It Works
 
-Check queue state:
+1. Creates a tmux session with N panes
+2. Optionally sets up git worktrees (if `-w` specified)
+3. Pipes each task prompt to `claude-code` in its pane
+4. Attaches to session so you can watch all tasks run
+
+That's it. No daemons, no state files, no polling.
+
+## Tmux Commands
 
 ```bash
-ls -la ~/.claude-code/orchestrator/workers/0/
-cat ~/.claude-code/orchestrator/workers/0/status.json
-cat ~/.claude-code/orchestrator/workers/0/result.json
+# Detach from session (keep tasks running)
+Ctrl-b d
+
+# Reattach later
+tmux attach -t conductor
+
+# Kill session
+tmux kill-session -t conductor
+
+# List sessions
+tmux ls
 ```
 
-Check locks:
+## Requirements
 
-```bash
-cat ~/.claude-code/orchestrator/workers/0/.lock/pid
-ps -p $(cat ~/.claude-code/orchestrator/workers/0/.lock/pid)
-```
+- `tmux`
+- `claude-code` (Anthropic's Claude CLI)
+- `git` (only if using `-w` for worktrees)
 
-Reset:
+## Philosophy
 
-```bash
-pkill -f "bin/worker"
-rm -rf ~/.claude-code/orchestrator/workers/*
-./bin/orchestrator 3
-```
+This tool does one thing: launch Claude Code in multiple tmux panes.
+
+- **No orchestration** - tmux coordinates the layout
+- **No state tracking** - your eyes are the status monitor
+- **No result aggregation** - read the terminal
+- **No daemons** - just shell and tmux
+
+Simple tools, loosely joined.
 
 ## License
 

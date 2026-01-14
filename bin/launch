@@ -1,114 +1,123 @@
 #!/usr/bin/env bash
-# Launch Claude Code orchestration with tmux
+# Launch multiple Claude Code sessions in tmux
+# Usage: launch [options] "task1" "task2" "task3"
+#        launch -f tasks.txt
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-NUM_WORKERS=3
 SESSION_NAME="conductor"
 USE_WORKTREES=false
-BASE_DIR="$HOME/conductor-work"
+WORK_DIR="$HOME/.conductor-work"
+TASKS=()
 
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -w|--workers) NUM_WORKERS="$2"; shift 2 ;;
-    -n|--name) SESSION_NAME="$2"; shift 2 ;;
-    --worktrees) USE_WORKTREES=true; shift ;;
-    -d|--dir) BASE_DIR="$2"; shift 2 ;;
-    -h|--help)
-      cat <<EOF
-Usage: $0 [options]
+show_help() {
+  cat <<EOF
+Usage: $(basename "$0") [options] "task1" "task2" ...
+       $(basename "$0") -f tasks.txt
+
+Launch N Claude Code sessions in tmux, one per task.
 
 Options:
-  -w, --workers NUM   Number of workers (default: 3)
-  -n, --name NAME     Session name (default: conductor)
-  --worktrees         Use git worktrees
-  -d, --dir DIR       Base directory (default: ~/conductor-work)
-  -h, --help          Show help
+  -f FILE         Read tasks from file (one per line)
+  -n NAME         Session name (default: conductor)
+  -w              Use git worktrees (isolate changes per task)
+  -d DIR          Work directory for worktrees (default: ~/.conductor-work)
+  -h              Show this help
+
+Examples:
+  launch "Review auth.py" "Run tests" "Fix bug #123"
+  launch -f tasks.txt -w
+  echo "Review all .go files" | launch -f -
 EOF
-      exit 0
-      ;;
-    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  exit 0
+}
+
+while getopts "f:n:wd:h" opt; do
+  case $opt in
+    f) TASK_FILE="$OPTARG" ;;
+    n) SESSION_NAME="$OPTARG" ;;
+    w) USE_WORKTREES=true ;;
+    d) WORK_DIR="$OPTARG" ;;
+    h) show_help ;;
+    *) show_help ;;
   esac
 done
+shift $((OPTIND - 1))
 
-command -v tmux >/dev/null 2>&1 || {
-  echo "Error: tmux not installed" >&2
-  exit 1
-}
+# Load tasks from file or args
+if [ -n "${TASK_FILE:-}" ]; then
+  if [ "$TASK_FILE" = "-" ]; then
+    mapfile -t TASKS
+  else
+    mapfile -t TASKS < "$TASK_FILE"
+  fi
+else
+  TASKS=("$@")
+fi
 
+[ ${#TASKS[@]} -eq 0 ] && { echo "Error: No tasks specified" >&2; show_help; }
+
+# Check dependencies
+command -v tmux >/dev/null || { echo "Error: tmux required" >&2; exit 1; }
+command -v claude-code >/dev/null || { echo "Error: claude-code required" >&2; exit 1; }
+
+# Check for existing session
 tmux has-session -t "$SESSION_NAME" 2>/dev/null && {
-  echo "Session '$SESSION_NAME' exists" >&2
-  echo "Attach: tmux attach -t $SESSION_NAME" >&2
+  echo "Session '$SESSION_NAME' already exists"
+  echo "Attach: tmux attach -t $SESSION_NAME"
+  echo "Kill:   tmux kill-session -t $SESSION_NAME"
   exit 1
 }
 
-setup_worktrees() {
+# Setup worktrees if requested
+if [ "$USE_WORKTREES" = true ]; then
   git rev-parse --git-dir >/dev/null 2>&1 || {
-    echo "Error: --worktrees requires git repository" >&2
+    echo "Error: -w requires git repository" >&2
     exit 1
   }
-
-  local branch=$(git rev-parse --abbrev-ref HEAD)
-  mkdir -p "$BASE_DIR"
-
-  for i in $(seq 0 $((NUM_WORKERS - 1))); do
-    local wdir="$BASE_DIR/worker-$i"
-    [ -d "$wdir" ] || {
-      echo "Creating worktree: $wdir"
-      git worktree add "$wdir" "$branch" 2>/dev/null || true
-    }
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  mkdir -p "$WORK_DIR"
+  echo "Setting up ${#TASKS[@]} worktrees..."
+  for i in "${!TASKS[@]}"; do
+    WDIR="$WORK_DIR/task-$i"
+    [ -d "$WDIR" ] || git worktree add -q "$WDIR" "$BRANCH" 2>/dev/null || true
   done
-}
+fi
 
-get_worker_dir() {
-  if [ "$USE_WORKTREES" = true ]; then
-    echo "$BASE_DIR/worker-$1"
-  else
-    echo "$PWD"
-  fi
-}
+echo "Creating session with ${#TASKS[@]} tasks..."
 
-[ "$USE_WORKTREES" = true ] && setup_worktrees
+# Create session
+tmux new-session -d -s "$SESSION_NAME" -n "tasks"
 
-echo "Creating session: $SESSION_NAME (workers: $NUM_WORKERS)"
-
-tmux new-session -d -s "$SESSION_NAME" -n "conductor"
-
-# Layout based on worker count
-case $NUM_WORKERS in
-  1) tmux split-window -h -t "$SESSION_NAME:0" ;;
-  2) tmux split-window -h -t "$SESSION_NAME:0"
-     tmux split-window -h -t "$SESSION_NAME:0" ;;
-  3) tmux split-window -h -t "$SESSION_NAME:0"
-     tmux split-window -v -t "$SESSION_NAME:0.1"
-     tmux split-window -v -t "$SESSION_NAME:0.2" ;;
-  *) tmux split-window -h -t "$SESSION_NAME:0"
-     for i in $(seq 1 $((NUM_WORKERS - 1))); do
-       tmux split-window -v -t "$SESSION_NAME:0.$i"
-     done
-     tmux select-layout -t "$SESSION_NAME:0" tiled ;;
-esac
-
-# Start workers
-for i in $(seq 0 $((NUM_WORKERS - 1))); do
-  local pane=$((i + 1))
-  local wdir=$(get_worker_dir $i)
-  tmux send-keys -t "$SESSION_NAME:0.$pane" "cd '$wdir'" C-m
-  tmux send-keys -t "$SESSION_NAME:0.$pane" "'$SCRIPT_DIR/worker' $i '$wdir'" C-m
+# Create panes (first one already exists)
+for ((i=1; i<${#TASKS[@]}; i++)); do
+  tmux split-window -t "$SESSION_NAME:0"
 done
 
-# Start orchestrator
-tmux send-keys -t "$SESSION_NAME:0.0" "cd '$PWD'" C-m
-tmux send-keys -t "$SESSION_NAME:0.0" "sleep 1 && '$SCRIPT_DIR/orchestrator' $NUM_WORKERS" C-m
+# Layout panes
+tmux select-layout -t "$SESSION_NAME:0" tiled
 
-tmux select-pane -t "$SESSION_NAME:0.0"
+# Start tasks in each pane
+for i in "${!TASKS[@]}"; do
+  PANE="$SESSION_NAME:0.$i"
 
-echo "✓ Session created"
+  if [ "$USE_WORKTREES" = true ]; then
+    WDIR="$WORK_DIR/task-$i"
+    tmux send-keys -t "$PANE" "cd '$WDIR'" C-m
+  fi
+
+  # Pipe task to claude-code
+  tmux send-keys -t "$PANE" "echo '${TASKS[$i]}' | claude-code" C-m
+done
+
+echo "✓ Session '$SESSION_NAME' created"
 echo ""
-echo "Attach: tmux attach -t $SESSION_NAME"
-echo "Detach: Ctrl-b d"
-echo "Kill: tmux kill-session -t $SESSION_NAME"
+echo "Tasks:"
+for i in "${!TASKS[@]}"; do
+  echo "  [$i] ${TASKS[$i]}"
+done
+echo ""
+echo "Attaching to session (Ctrl-b d to detach)..."
 
-[ -t 0 ] && { sleep 1; exec tmux attach -t "$SESSION_NAME"; }
+sleep 1
+exec tmux attach -t "$SESSION_NAME"
