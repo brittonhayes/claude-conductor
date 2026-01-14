@@ -117,7 +117,14 @@ for i in "${!TASKS[@]}"; do
   echo "  [$i] ${TASKS[$i]}"
 done
 echo ""
-echo "Attaching to session (Ctrl-b d to detach)..."
 
 sleep 1
-exec tmux attach -t "$SESSION_NAME"
+
+# Set active session - use switch-client if already in tmux, attach otherwise
+if [ -n "${TMUX:-}" ]; then
+  echo "Switching to session (Ctrl-b d to detach)..."
+  exec tmux switch-client -t "$SESSION_NAME"
+else
+  echo "Attaching to session (Ctrl-b d to detach)..."
+  exec tmux attach -t "$SESSION_NAME"
+fi
