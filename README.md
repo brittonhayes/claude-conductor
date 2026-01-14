@@ -4,6 +4,24 @@ Launch multiple Claude Code sessions in tmux. One command, N parallel tasks.
 
 ## Installation
 
+### Quick Install (Recommended)
+
+Install directly to `~/.local/bin` without cloning:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/brittonhayes/claude-conductor/main/install.sh | bash
+```
+
+Then use it anywhere:
+
+```bash
+claude-conductor -h
+```
+
+### Manual Install
+
+Or clone the repository:
+
 ```bash
 git clone https://github.com/brittonhayes/claude-conductor
 cd claude-conductor
@@ -15,7 +33,7 @@ cd claude-conductor
 ### Basic - From Command Line
 
 ```bash
-./bin/launch "Review auth.py for bugs" "Run all tests" "Check for TODOs"
+claude-conductor "Review auth.py for bugs" "Run all tests" "Check for TODOs"
 ```
 
 Creates a tmux session with 3 panes, each running a Claude Code session with the given prompt.
@@ -29,13 +47,13 @@ Run the test suite and fix any failures
 Update documentation for new API endpoints
 EOF
 
-./bin/launch -f tasks.txt
+claude-conductor -f tasks.txt
 ```
 
 ### From Stdin
 
 ```bash
-echo "Explain how the authentication system works" | ./bin/launch -f -
+echo "Explain how the authentication system works" | claude-conductor -f -
 ```
 
 ### With Git Worktrees
@@ -43,7 +61,7 @@ echo "Explain how the authentication system works" | ./bin/launch -f -
 Isolate changes from each task in separate worktrees:
 
 ```bash
-./bin/launch -w \
+claude-conductor -w \
   "Refactor auth module" \
   "Add new API endpoint" \
   "Fix bug #123"
@@ -65,7 +83,7 @@ Each task runs in `~/.conductor-work/task-N/` with an isolated git worktree.
 
 **Parallel code review:**
 ```bash
-./bin/launch -w \
+claude-conductor -w \
   "Review pkg/auth/*.go for security issues" \
   "Review pkg/api/*.go for error handling" \
   "Review pkg/db/*.go for SQL injection risks"
@@ -73,7 +91,7 @@ Each task runs in `~/.conductor-work/task-N/` with an isolated git worktree.
 
 **Test different modules:**
 ```bash
-./bin/launch \
+claude-conductor \
   "Run unit tests for auth package" \
   "Run integration tests for API" \
   "Run e2e tests"
@@ -81,7 +99,7 @@ Each task runs in `~/.conductor-work/task-N/` with an isolated git worktree.
 
 **Research tasks:**
 ```bash
-./bin/launch \
+claude-conductor \
   "Find all TODO comments and summarize them" \
   "List all external dependencies and their versions" \
   "Check for outdated npm packages"
