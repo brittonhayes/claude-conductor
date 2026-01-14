@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# Launch multiple Claude Code sessions in tmux
+# Usage: launch [options] "task1" "task2" "task3"
+#        launch -f tasks.txt
+
+set -euo pipefail
+
+SESSION_NAME="conductor"
+USE_WORKTREES=false
+WORK_DIR="$HOME/.conductor-work"
+TASKS=()
+
+show_help() {
+  cat <<EOF
+Usage: $(basename "$0") [options] "task1" "task2" ...
+       $(basename "$0") -f tasks.txt
+
+Launch N Claude Code sessions in tmux, one per task.
+
+Options:
+  -f FILE         Read tasks from file (one per line)
+  -n NAME         Session name (default: conductor)
+  -w              Use git worktrees (isolate changes per task)
+  -d DIR          Work directory for worktrees (default: ~/.conductor-work)
+  -h              Show this help
+
+Examples:
+  launch "Review auth.py" "Run tests" "Fix bug #123"
+  launch -f tasks.txt -w
+  echo "Review all .go files" | launch -f -
+EOF
+  exit 0
+}
+
+while getopts "f:n:wd:h" opt; do
+  case $opt in
+    f) TASK_FILE="$OPTARG" ;;
+    n) SESSION_NAME="$OPTARG" ;;
+    w) USE_WORKTREES=true ;;
+    d) WORK_DIR="$OPTARG" ;;
+    h) show_help ;;
+    *) show_help ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+# Load tasks from file or args
+if [ -n "${TASK_FILE:-}" ]; then
+  if [ "$TASK_FILE" = "-" ]; then
+    mapfile -t TASKS
+  else
+    mapfile -t TASKS < "$TASK_FILE"
+  fi
+else
+  TASKS=("$@")
+fi
+
+[ ${#TASKS[@]} -eq 0 ] && { echo "Error: No tasks specified" >&2; show_help; }
+
+# Check dependencies
+command -v tmux >/dev/null || { echo "Error: tmux required" >&2; exit 1; }
+command -v claude-code >/dev/null || { echo "Error: claude-code required" >&2; exit 1; }
+
+# Check for existing session
+tmux has-session -t "$SESSION_NAME" 2>/dev/null && {
+  echo "Session '$SESSION_NAME' already exists"
+  echo "Attach: tmux attach -t $SESSION_NAME"
+  echo "Kill:   tmux kill-session -t $SESSION_NAME"
+  exit 1
+}
+
+# Setup worktrees if requested
+if [ "$USE_WORKTREES" = true ]; then
+  git rev-parse --git-dir >/dev/null 2>&1 || {
+    echo "Error: -w requires git repository" >&2
+    exit 1
+  }
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  mkdir -p "$WORK_DIR"
+  echo "Setting up ${#TASKS[@]} worktrees..."
+  for i in "${!TASKS[@]}"; do
+    WDIR="$WORK_DIR/task-$i"
+    [ -d "$WDIR" ] || git worktree add -q "$WDIR" "$BRANCH" 2>/dev/null || true
+  done
+fi
+
+echo "Creating session with ${#TASKS[@]} tasks..."
+
+# Create session
+tmux new-session -d -s "$SESSION_NAME" -n "tasks"
+
+# Create panes (first one already exists)
+for ((i=1; i<${#TASKS[@]}; i++)); do
+  tmux split-window -t "$SESSION_NAME:0"
+done
+
+# Layout panes
+tmux select-layout -t "$SESSION_NAME:0" tiled
+
+# Start tasks in each pane
+for i in "${!TASKS[@]}"; do
+  PANE="$SESSION_NAME:0.$i"
+
+  if [ "$USE_WORKTREES" = true ]; then
+    WDIR="$WORK_DIR/task-$i"
+    tmux send-keys -t "$PANE" "cd '$WDIR'" C-m
+  fi
+
+  # Pipe task to claude-code
+  tmux send-keys -t "$PANE" "echo '${TASKS[$i]}' | claude-code" C-m
+done
+
+echo "✓ Session '$SESSION_NAME' created"
+echo ""
+echo "Tasks:"
+for i in "${!TASKS[@]}"; do
+  echo "  [$i] ${TASKS[$i]}"
+done
+echo ""
+echo "Attaching to session (Ctrl-b d to detach)..."
+
+sleep 1
+exec tmux attach -t "$SESSION_NAME"
