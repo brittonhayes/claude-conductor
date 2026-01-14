@@ -1,0 +1,22 @@
+{
+  "name": "claude-conductor",
+  "version": "0.1.0",
+  "description": "Filesystem-based orchestration system for Claude Code - one parent session coordinating multiple worker sessions",
+  "type": "module",
+  "bin": {
+    "conductor-orchestrator": "./bin/orchestrator.js",
+    "conductor-worker": "./bin/worker.sh",
+    "conductor-launch": "./bin/launch.sh"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "claude",
+    "orchestration",
+    "parallel",
+    "workers"
+  ],
+  "author": "",
+  "license": "MIT"
+}
