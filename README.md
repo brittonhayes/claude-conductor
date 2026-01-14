@@ -1,6 +1,6 @@
 # Claude Conductor
 
-Launch multiple Claude Code sessions in tmux. One command, N parallel tasks.
+Launch multiple Claude CLI sessions in tmux. One command, N parallel tasks.
 
 ## Installation
 
@@ -44,7 +44,7 @@ cd claude-conductor
 claude-conductor "Review auth.py for bugs" "Run all tests" "Check for TODOs"
 ```
 
-Creates a tmux session with 3 panes, each running a Claude Code session with the given prompt.
+Creates a tmux session with 3 panes, each running a Claude CLI session with the given prompt.
 
 ### From File
 
@@ -117,7 +117,7 @@ claude-conductor \
 
 1. Creates a tmux session with N panes
 2. Optionally sets up git worktrees (if `-w` specified)
-3. Pipes each task prompt to `claude-code` in its pane
+3. Pipes each task prompt to `claude` in its pane
 4. Attaches to session so you can watch all tasks run
 
 That's it. No daemons, no state files, no polling.
@@ -141,12 +141,12 @@ tmux ls
 ## Requirements
 
 - `tmux`
-- `claude-code` (Anthropic's Claude CLI)
+- `claude` (Anthropic's Claude CLI)
 - `git` (only if using `-w` for worktrees)
 
 ## Philosophy
 
-This tool does one thing: launch Claude Code in multiple tmux panes.
+This tool does one thing: launch Claude CLI in multiple tmux panes.
 
 - **No orchestration** - tmux coordinates the layout
 - **No state tracking** - your eyes are the status monitor

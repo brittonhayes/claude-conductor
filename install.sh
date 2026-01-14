@@ -69,8 +69,8 @@ if ! command -v tmux >/dev/null 2>&1; then
   MISSING_DEPS+=("tmux")
 fi
 
-if ! command -v claude-code >/dev/null 2>&1; then
-  MISSING_DEPS+=("claude-code")
+if ! command -v claude >/dev/null 2>&1; then
+  MISSING_DEPS+=("claude")
 fi
 
 if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
@@ -82,8 +82,8 @@ if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
       tmux)
         echo "  - tmux: https://github.com/tmux/tmux/wiki/Installing"
         ;;
-      claude-code)
-        echo "  - claude-code: npm install -g @anthropic-ai/claude-code"
+      claude)
+        echo "  - claude: npm install -g @anthropic-ai/claude-cli"
         ;;
     esac
   done

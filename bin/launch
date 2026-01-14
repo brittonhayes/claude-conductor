@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch multiple Claude Code sessions in tmux
+# Launch multiple Claude CLI sessions in tmux
 # Usage: launch [options] "task1" "task2" "task3"
 #        launch -f tasks.txt
 
@@ -15,7 +15,7 @@ show_help() {
 Usage: $(basename "$0") [options] "task1" "task2" ...
        $(basename "$0") -f tasks.txt
 
-Launch N Claude Code sessions in tmux, one per task.
+Launch N Claude CLI sessions in tmux, one per task.
 
 Options:
   -f FILE         Read tasks from file (one per line)
@@ -59,7 +59,7 @@ fi
 
 # Check dependencies
 command -v tmux >/dev/null || { echo "Error: tmux required" >&2; exit 1; }
-command -v claude-code >/dev/null || { echo "Error: claude-code required" >&2; exit 1; }
+command -v claude >/dev/null || { echo "Error: claude required" >&2; exit 1; }
 
 # Check for existing session
 tmux has-session -t "$SESSION_NAME" 2>/dev/null && {
@@ -106,8 +106,8 @@ for i in "${!TASKS[@]}"; do
     tmux send-keys -t "$PANE" "cd '$WDIR'" C-m
   fi
 
-  # Pipe task to claude-code
-  tmux send-keys -t "$PANE" "echo '${TASKS[$i]}' | claude-code" C-m
+  # Pipe task to claude
+  tmux send-keys -t "$PANE" "echo '${TASKS[$i]}' | claude" C-m
 done
 
 echo "✓ Session '$SESSION_NAME' created"
