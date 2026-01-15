@@ -4,33 +4,11 @@ Manage multiple Claude Code sessions from a single terminal interface.
 
 ## Installation
 
-### Prerequisites
-
-- Go 1.21+
-- Claude Code CLI (`claude`)
-
-### Using go install
-
 ```bash
 go install github.com/brittonhayes/claudes/cmd/claudes@latest
 ```
 
-### Build from Source
-
-```bash
-git clone https://github.com/brittonhayes/claudes
-cd claudes
-go build -o claudes ./cmd/claudes
-sudo mv claudes /usr/local/bin/
-```
-
-Or install to ~/.local/bin:
-
-```bash
-go build -o claudes ./cmd/claudes
-mkdir -p ~/.local/bin
-mv claudes ~/.local/bin/
-```
+Requires Go 1.21+ and Claude Code CLI (`claude`).
 
 ## Usage
 
