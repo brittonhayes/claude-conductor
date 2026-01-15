@@ -1,198 +1,118 @@
 # Claude Conductor
 
-Launch multiple Claude CLI sessions in tmux. One command, N parallel tasks.
+Centralized management for multiple Claude Code sessions. Spawn parallel agents, monitor progress, and attach for follow-ups.
 
 ## Installation
 
-### Quick Install (Recommended)
+### Prerequisites
 
-Install directly to `~/.local/bin` without cloning:
+- Go 1.21+
+- Claude Code CLI (`claude`)
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/brittonhayes/claude-conductor/main/install.sh | bash
-```
-
-The installer will check if `~/.local/bin` is in your PATH and provide instructions if needed.
-
-Once installed, use it from anywhere:
-
-```bash
-claude-conductor -h
-```
-
-Or use the full path if you haven't added `~/.local/bin` to your PATH:
-
-```bash
-~/.local/bin/claude-conductor -h
-```
-
-### Manual Install
-
-Or clone the repository:
+### Build from Source
 
 ```bash
 git clone https://github.com/brittonhayes/claude-conductor
 cd claude-conductor
-./bin/launch -h
+go build -o conductor ./cmd/conductor
+sudo mv conductor /usr/local/bin/
+```
+
+Or install to ~/.local/bin:
+
+```bash
+go build -o conductor ./cmd/conductor
+mkdir -p ~/.local/bin
+mv conductor ~/.local/bin/
 ```
 
 ## Usage
 
-### Basic - From Command Line
+### Spawn Parallel Tasks
 
 ```bash
-claude-conductor "Review auth.py for bugs" "Run all tests" "Check for TODOs"
+conductor "Review auth.py" "Run all tests" "Check for TODOs"
 ```
 
-Creates a tmux session with 3 panes, each running a Claude CLI session with the given prompt.
+This spawns 3 background Claude sessions and opens the TUI.
 
 ### From File
 
 ```bash
 cat > tasks.txt <<EOF
 Review all Python files for security issues
+
+
 Run the test suite and fix any failures
+
+
 Update documentation for new API endpoints
 EOF
 
-claude-conductor -f tasks.txt
+conductor -f tasks.txt
 ```
 
-### From Stdin
+Tasks separated by 3+ newlines.
+
+### View Active Sessions
 
 ```bash
-echo "Explain how the authentication system works" | claude-conductor -f -
+conductor
 ```
 
-### Multiline Tasks
+Opens the TUI showing all active sessions:
 
-Tasks are separated by TWO blank lines, allowing multiline prompts with formatting:
+```
+Claude Conductor
 
-```bash
-cat > tasks.txt <<EOF
-Review the authentication system:
-- Check for security vulnerabilities
-- Ensure proper error handling
-- Verify token expiration logic
+> 0  Review auth.py      Running      2m       Reviewing authentication...
+  1  Run all tests       Running      2m       Running pytest suite...
+  2  Check for TODOs     Complete     1m       Found 12 TODO items
 
-
-Run the complete test suite and:
-1. Fix any failing tests
-2. Add tests for edge cases
-3. Update test documentation
-
-
-Update the API documentation to include:
-- New endpoints added in v2.0
-- Authentication requirements
-- Rate limiting details
-EOF
-
-claude-conductor -f tasks.txt
+[↑↓] navigate  [enter] attach  [d] delete  [r] refresh  [q] quit
 ```
 
-Note: Single blank lines within a task are preserved, TWO+ blank lines separate tasks.
+### Attach and Follow Up
 
-Works great with clipboard (pbpaste/xclip):
+1. Navigate with ↑↓ or j/k
+2. Press Enter on a session
+3. Type your follow-up prompt
+4. Watch the response stream
+5. Automatically returns to TUI
 
-```bash
-pbpaste | claude-conductor -f -
-```
+Sessions stay alive for continuous conversation.
 
-### With Git Worktrees
+### Delete Sessions
 
-Isolate changes from each task in separate worktrees:
+Press `d` on any session to delete it.
 
-```bash
-claude-conductor -w \
-  "Refactor auth module" \
-  "Add new API endpoint" \
-  "Fix bug #123"
-```
+## How It Works
 
-Each task runs in `~/.conductor-work/task-N/` with an isolated git worktree.
+1. Spawns Claude agents using the Agent SDK
+2. Each session runs in background with named session ID
+3. Output streams to `~/.conductor/outputs/`
+4. TUI monitors sessions and lets you attach
+5. Sessions persist until explicitly deleted
+
+No tmux. No daemons. Pure Go and Claude SDK.
 
 ## Options
 
 ```
--f FILE    Read tasks from file (double-blank-line delimited, or - for stdin)
--n NAME    Session name (default: conductor)
--w         Use git worktrees (isolate changes per task)
--d DIR     Work directory for worktrees (default: ~/.conductor-work)
+-f FILE    Read tasks from file (- for stdin)
 -h         Show help
 ```
 
-**Task Input Formats:**
-- Command line: Each argument is a separate task
-- File/stdin with `-f`: Tasks separated by TWO+ blank lines (single blanks preserved within tasks)
+## Architecture
 
-## Examples
-
-**Parallel code review:**
-```bash
-claude-conductor -w \
-  "Review pkg/auth/*.go for security issues" \
-  "Review pkg/api/*.go for error handling" \
-  "Review pkg/db/*.go for SQL injection risks"
 ```
-
-**Test different modules:**
-```bash
-claude-conductor \
-  "Run unit tests for auth package" \
-  "Run integration tests for API" \
-  "Run e2e tests"
+conductor
+├── cmd/conductor/     CLI entry point
+└── internal/
+    ├── agent/         Claude SDK integration
+    ├── session/       Session state management
+    └── tui/          Bubbletea interface
 ```
-
-**Research tasks:**
-```bash
-claude-conductor \
-  "Find all TODO comments and summarize them" \
-  "List all external dependencies and their versions" \
-  "Check for outdated npm packages"
-```
-
-## How It Works
-
-1. Creates a tmux session with N panes
-2. Optionally sets up git worktrees (if `-w` specified)
-3. Pipes each task prompt to `claude` in its pane
-4. Attaches to session so you can watch all tasks run
-
-That's it. No daemons, no state files, no polling.
-
-## Tmux Commands
-
-```bash
-# Detach from session (keep tasks running)
-Ctrl-b d
-
-# Reattach later
-tmux attach -t conductor
-
-# Kill session
-tmux kill-session -t conductor
-
-# List sessions
-tmux ls
-```
-
-## Requirements
-
-- `tmux`
-- `claude` (Anthropic's Claude CLI)
-- `git` (only if using `-w` for worktrees)
-
-## Philosophy
-
-This tool does one thing: launch Claude CLI in multiple tmux panes.
-
-- **No orchestration** - tmux coordinates the layout
-- **No state tracking** - your eyes are the status monitor
-- **No result aggregation** - read the terminal
-- **No daemons** - just shell and tmux
-
-Simple tools, loosely joined.
 
 ## License
 
