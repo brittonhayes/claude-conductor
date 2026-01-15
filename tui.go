@@ -1,22 +1,20 @@
-package tui
+package main
 
 import (
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/brittonhayes/claude-conductor/internal/agent"
-	"github.com/brittonhayes/claude-conductor/internal/session"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type Model struct {
-	sessions []*session.Session
-	store    *session.Store
-	agent    *agent.Manager
+	sessions []*Session
+	store    *Store
+	agent    *Manager
 	cursor   int
 	err      error
-	attach   *session.Session
+	attach   *Session
 }
 
 type tickMsg time.Time
@@ -27,7 +25,7 @@ func tick() tea.Cmd {
 	})
 }
 
-func New(store *session.Store, agent *agent.Manager) Model {
+func New(store *Store, agent *Manager) Model {
 	return Model{
 		store: store,
 		agent: agent,
@@ -77,7 +75,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.loadSessions()
 		}
 
-	case []*session.Session:
+	case []*Session:
 		m.sessions = msg
 		if m.cursor >= len(m.sessions) {
 			m.cursor = len(m.sessions) - 1
@@ -138,6 +136,6 @@ func truncate(s string, max int) string {
 	return s[:max-3] + "..."
 }
 
-func (m Model) Attach() *session.Session {
+func (m Model) Attach() *Session {
 	return m.attach
 }

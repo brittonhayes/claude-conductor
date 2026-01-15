@@ -1,4 +1,4 @@
-package agent
+package main
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	claudecode "github.com/severity1/claude-agent-sdk-go"
-	"github.com/brittonhayes/claude-conductor/internal/session"
 )
 
 type Manager struct {
@@ -27,7 +26,7 @@ func NewManager(outputDir string) (*Manager, error) {
 	}, nil
 }
 
-func (m *Manager) Spawn(sess *session.Session) error {
+func (m *Manager) Spawn(sess *Session) error {
 	outputPath := filepath.Join(m.outputDir, sess.ID+".txt")
 	sess.OutputFile = outputPath
 
@@ -76,7 +75,7 @@ func (m *Manager) Spawn(sess *session.Session) error {
 	return nil
 }
 
-func (m *Manager) Tail(sess *session.Session) (string, error) {
+func (m *Manager) Tail(sess *Session) (string, error) {
 	data, err := os.ReadFile(sess.OutputFile)
 	if err != nil {
 		return "", err
@@ -95,7 +94,7 @@ func (m *Manager) Stop(id string) {
 	}
 }
 
-func (m *Manager) Attach(ctx context.Context, sess *session.Session, followup string) error {
+func (m *Manager) Attach(ctx context.Context, sess *Session, followup string) error {
 	outFile, err := os.OpenFile(sess.OutputFile, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err

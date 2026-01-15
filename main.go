@@ -12,9 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brittonhayes/claude-conductor/internal/agent"
-	"github.com/brittonhayes/claude-conductor/internal/session"
-	"github.com/brittonhayes/claude-conductor/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -100,12 +97,12 @@ func spawnTasks(tasks []string) error {
 	sessionDir := filepath.Join(baseDir, "sessions")
 	outputDir := filepath.Join(baseDir, "outputs")
 
-	store, err := session.NewStore(sessionDir)
+	store, err := NewStore(sessionDir)
 	if err != nil {
 		return err
 	}
 
-	mgr, err := agent.NewManager(outputDir)
+	mgr, err := NewManager(outputDir)
 	if err != nil {
 		return err
 	}
@@ -116,10 +113,10 @@ func spawnTasks(tasks []string) error {
 			continue
 		}
 
-		sess := &session.Session{
+		sess := &Session{
 			ID:      genID(),
 			Task:    task,
-			Status:  session.Running,
+			Status:  Running,
 			Started: time.Now(),
 		}
 
@@ -147,25 +144,25 @@ func runTUI() error {
 	sessionDir := filepath.Join(baseDir, "sessions")
 	outputDir := filepath.Join(baseDir, "outputs")
 
-	store, err := session.NewStore(sessionDir)
+	store, err := NewStore(sessionDir)
 	if err != nil {
 		return err
 	}
 
-	mgr, err := agent.NewManager(outputDir)
+	mgr, err := NewManager(outputDir)
 	if err != nil {
 		return err
 	}
 
 	for {
-		m := tui.New(store, mgr)
+		m := New(store, mgr)
 		p := tea.NewProgram(m)
 		final, err := p.Run()
 		if err != nil {
 			return err
 		}
 
-		model := final.(tui.Model)
+		model := final.(Model)
 		if model.Attach() == nil {
 			break
 		}
@@ -197,11 +194,4 @@ func genID() string {
 	b := make([]byte, 4)
 	rand.Read(b)
 	return hex.EncodeToString(b)
-}
-
-func truncate(s string, max int) string {
-	if len(s) <= max {
-		return s
-	}
-	return s[:max-3] + "..."
 }

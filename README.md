@@ -14,14 +14,14 @@ Centralized management for multiple Claude Code sessions. Spawn parallel agents,
 ```bash
 git clone https://github.com/brittonhayes/claude-conductor
 cd claude-conductor
-go build -o conductor ./cmd/conductor
+go build -o conductor .
 sudo mv conductor /usr/local/bin/
 ```
 
 Or install to ~/.local/bin:
 
 ```bash
-go build -o conductor ./cmd/conductor
+go build -o conductor .
 mkdir -p ~/.local/bin
 mv conductor ~/.local/bin/
 ```
@@ -106,12 +106,10 @@ No tmux. No daemons. Pure Go and Claude SDK.
 ## Architecture
 
 ```
-conductor
-├── cmd/conductor/     CLI entry point
-└── internal/
-    ├── agent/         Claude SDK integration
-    ├── session/       Session state management
-    └── tui/          Bubbletea interface
+main.go      CLI entry, spawning, attach loop
+session.go   Session state management
+agent.go     Claude SDK integration
+tui.go       Bubbletea interface
 ```
 
 ## License

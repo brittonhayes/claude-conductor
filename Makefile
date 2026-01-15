@@ -1,7 +1,7 @@
 .PHONY: build install clean
 
 build:
-	go build -o conductor ./cmd/conductor
+	go build -o conductor .
 
 install: build
 	mkdir -p ~/.local/bin
