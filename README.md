@@ -1,6 +1,6 @@
 # Claude Conductor
 
-Centralized management for multiple Claude Code sessions. Spawn parallel agents, monitor progress, and attach for follow-ups.
+Manage multiple Claude Code sessions from a single terminal interface.
 
 ## Installation
 
@@ -86,30 +86,13 @@ Sessions stay alive for continuous conversation.
 
 Press `d` on any session to delete it.
 
-## How It Works
+## Reference
 
-1. Spawns Claude agents using the Agent SDK
-2. Each session runs in background with named session ID
-3. Output streams to `~/.conductor/outputs/`
-4. TUI monitors sessions and lets you attach
-5. Sessions persist until explicitly deleted
-
-No tmux. No daemons. Pure Go and Claude SDK.
-
-## Options
+### Command Options
 
 ```
 -f FILE    Read prompts from file (- for stdin)
 -h         Show help
-```
-
-## Architecture
-
-```
-main.go      CLI entry, spawning, attach loop
-session.go   Session state management
-agent.go     Claude SDK integration
-tui.go       Bubbletea interface
 ```
 
 ## License
