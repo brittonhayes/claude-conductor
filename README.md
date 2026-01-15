@@ -1,6 +1,6 @@
 # Claudes
 
-Manage multiple Claude Code sessions from a single terminal interface.
+Manage multiple Claude Code sessions in worktrees from a single terminal interface.
 
 ## Installation
 
