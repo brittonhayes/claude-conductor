@@ -97,7 +97,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	var b strings.Builder
 
-	b.WriteString("Claude Conductor\n\n")
+	b.WriteString("Claudes\n\n")
 
 	if len(m.sessions) == 0 {
 		b.WriteString("No active sessions\n")

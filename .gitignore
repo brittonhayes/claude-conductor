@@ -1,5 +1,4 @@
-/conductor
-/claude-conductor
+/claudes
 *.exe
 *.test
 *.out

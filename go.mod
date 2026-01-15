@@ -1,4 +1,4 @@
-module github.com/brittonhayes/claude-conductor
+module github.com/brittonhayes/claudes
 
 go 1.24.7
 

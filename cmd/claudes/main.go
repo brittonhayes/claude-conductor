@@ -20,7 +20,7 @@ func main() {
 		file       = flag.String("f", "", "read prompts from file (- for stdin)")
 		help       = flag.Bool("h", false, "show help")
 		useWorktree = flag.Bool("w", false, "create git worktrees for each session")
-		worktreeDir = flag.String("d", "", "directory for worktrees (default: ~/.conductor-work)")
+		worktreeDir = flag.String("d", "", "directory for worktrees (default: ~/.claudes-work)")
 	)
 	flag.Parse()
 
@@ -52,17 +52,17 @@ func main() {
 }
 
 func usage() {
-	fmt.Println(`conductor - manage multiple Claude sessions
+	fmt.Println(`claudes - manage multiple Claude sessions
 
 Usage:
-  conductor [options] "prompt1" "prompt2" "prompt3"
-  conductor -f prompts.txt
-  conductor (starts TUI for existing sessions)
+  claudes [options] "prompt1" "prompt2" "prompt3"
+  claudes -f prompts.txt
+  claudes (starts TUI for existing sessions)
 
 Options:
   -f FILE    Read prompts from file (- for stdin)
   -w         Create git worktrees for each session
-  -d DIR     Directory for worktrees (default: ~/.conductor-work)
+  -d DIR     Directory for worktrees (default: ~/.claudes-work)
   -h         Show help`)
 }
 
@@ -94,13 +94,13 @@ func spawn(prompts []string, useWorktree bool, worktreeDir string) error {
 		return err
 	}
 
-	baseDir := filepath.Join(home, ".conductor")
+	baseDir := filepath.Join(home, ".claudes")
 	sessionDir := filepath.Join(baseDir, "sessions")
 	outputDir := filepath.Join(baseDir, "outputs")
 
 	// Set default worktree directory
 	if worktreeDir == "" {
-		worktreeDir = filepath.Join(home, ".conductor-work")
+		worktreeDir = filepath.Join(home, ".claudes-work")
 	}
 
 	store, err := NewStore(sessionDir)
@@ -174,7 +174,7 @@ func runTUI() error {
 		return err
 	}
 
-	baseDir := filepath.Join(home, ".conductor")
+	baseDir := filepath.Join(home, ".claudes")
 	sessionDir := filepath.Join(baseDir, "sessions")
 	outputDir := filepath.Join(baseDir, "outputs")
 

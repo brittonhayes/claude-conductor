@@ -5,9 +5,9 @@
 
 set -euo pipefail
 
-SESSION_NAME="conductor"
+SESSION_NAME="claudes"
 USE_WORKTREES=false
-WORK_DIR="$HOME/.conductor-work"
+WORK_DIR="$HOME/.claudes-work"
 TASKS=()
 
 show_help() {
@@ -19,9 +19,9 @@ Launch N Claude CLI sessions in tmux, one per task.
 
 Options:
   -f FILE         Read tasks from file (double-blank-line delimited)
-  -n NAME         Session name (default: conductor)
+  -n NAME         Session name (default: claudes)
   -w              Use git worktrees (isolate changes per task)
-  -d DIR          Work directory for worktrees (default: ~/.conductor-work)
+  -d DIR          Work directory for worktrees (default: ~/.claudes-work)
   -h              Show this help
 
 Task Input:
@@ -121,7 +121,7 @@ done
 tmux select-layout -t "$SESSION_NAME:0" tiled
 
 # Create temp directory for task files
-TASK_DIR=$(mktemp -d -t conductor-tasks-XXXXXX)
+TASK_DIR=$(mktemp -d -t claudes-tasks-XXXXXX)
 
 # Write each task to a temp file (handles multiline, special chars)
 for i in "${!TASKS[@]}"; do

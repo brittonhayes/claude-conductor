@@ -1,4 +1,4 @@
-# Claude Conductor
+# Claudes
 
 Manage multiple Claude Code sessions from a single terminal interface.
 
@@ -9,21 +9,27 @@ Manage multiple Claude Code sessions from a single terminal interface.
 - Go 1.21+
 - Claude Code CLI (`claude`)
 
+### Using go install
+
+```bash
+go install github.com/brittonhayes/claudes/cmd/claudes@latest
+```
+
 ### Build from Source
 
 ```bash
-git clone https://github.com/brittonhayes/claude-conductor
-cd claude-conductor
-go build -o conductor .
-sudo mv conductor /usr/local/bin/
+git clone https://github.com/brittonhayes/claudes
+cd claudes
+go build -o claudes ./cmd/claudes
+sudo mv claudes /usr/local/bin/
 ```
 
 Or install to ~/.local/bin:
 
 ```bash
-go build -o conductor .
+go build -o claudes ./cmd/claudes
 mkdir -p ~/.local/bin
-mv conductor ~/.local/bin/
+mv claudes ~/.local/bin/
 ```
 
 ## Usage
@@ -31,7 +37,7 @@ mv conductor ~/.local/bin/
 ### Spawn Parallel Sessions
 
 ```bash
-conductor "Review auth.py" "Run all tests" "Check for TODOs"
+claudes "Review auth.py" "Run all tests" "Check for TODOs"
 ```
 
 This spawns 3 background Claude sessions and opens the TUI.
@@ -49,7 +55,7 @@ Run the test suite and fix any failures
 Update documentation for new API endpoints
 EOF
 
-conductor -f prompts.txt
+claudes -f prompts.txt
 ```
 
 Prompts separated by 3+ newlines.
@@ -57,13 +63,13 @@ Prompts separated by 3+ newlines.
 ### View Active Sessions
 
 ```bash
-conductor
+claudes
 ```
 
 Opens the TUI showing all active sessions:
 
 ```
-Claude Conductor
+Claudes
 
 > 0  Review auth.py      Running      2m       Reviewing authentication...
   1  Run all tests       Running      2m       Running pytest suite...

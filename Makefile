@@ -1,12 +1,12 @@
 .PHONY: build install clean
 
 build:
-	go build -o conductor .
+	go build -o claudes ./cmd/claudes
 
 install: build
 	mkdir -p ~/.local/bin
-	mv conductor ~/.local/bin/
+	mv claudes ~/.local/bin/
 
 clean:
-	rm -f conductor
-	rm -rf ~/.conductor
+	rm -f claudes
+	rm -rf ~/.claudes
