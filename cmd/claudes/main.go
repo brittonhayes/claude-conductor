@@ -203,23 +203,14 @@ func runTUI() error {
 		}
 
 		sess := model.Attach()
-		fmt.Printf("\nAttaching to: %s\n", sess.Prompt)
-		fmt.Print("Follow-up: ")
+		fmt.Printf("\nResuming session: %s\n", sess.Prompt)
 
-		var followup string
-		fmt.Scanln(&followup)
-
-		if followup == "" {
-			continue
+		// Launch Claude Code CLI to resume the session
+		if err := mgr.Attach(sess); err != nil {
+			fmt.Fprintf(os.Stderr, "Error resuming session: %v\n", err)
+			fmt.Println("\nPress Enter to return to TUI...")
+			fmt.Scanln()
 		}
-
-		ctx := context.Background()
-		if err := mgr.Attach(ctx, sess, followup); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-
-		fmt.Println("\n\nPress Enter to return to TUI...")
-		fmt.Scanln()
 	}
 
 	return nil

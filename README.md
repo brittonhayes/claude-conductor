@@ -53,18 +53,17 @@ Claudes
   1  Run all tests       Running      2m       Running pytest suite...
   2  Check for TODOs     Complete     1m       Found 12 TODO items
 
-[↑↓] navigate  [enter] attach  [d] delete  [r] refresh  [q] quit
+[↑↓] navigate  [enter] resume  [d] delete  [r] refresh  [q] quit
 ```
 
-### Attach and Follow Up
+### Resume Sessions
 
 1. Navigate with ↑↓ or j/k
 2. Press Enter on a session
-3. Type your follow-up prompt
-4. Watch the response stream
-5. Automatically returns to TUI
+3. Opens Claude Code UI with the resumed session
+4. When you exit Claude Code, automatically returns to Claudes TUI
 
-Sessions stay alive for continuous conversation.
+Sessions stay alive for continuous conversation with full Claude Code UI access.
 
 ### Delete Sessions
 

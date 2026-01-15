@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 
@@ -109,33 +110,30 @@ func (m *Manager) Stop(id string) {
 	}
 }
 
-func (m *Manager) Attach(ctx context.Context, sess *Session, followup string) error {
-	outFile, err := os.OpenFile(sess.OutputFile, os.O_APPEND|os.O_WRONLY, 0644)
+func (m *Manager) Attach(sess *Session) error {
+	// Save current directory
+	originalDir, err := os.Getwd()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get current directory: %w", err)
 	}
-	defer outFile.Close()
+	defer os.Chdir(originalDir)
 
-	fmt.Fprintf(outFile, "\n\n--- Follow-up ---\n")
-
-	return claudecode.WithClient(ctx, func(client claudecode.Client) error {
-		if err := client.QueryWithSession(ctx, followup, sess.ID); err != nil {
-			return err
+	// Change to worktree directory if specified
+	if sess.WorktreePath != "" {
+		if err := os.Chdir(sess.WorktreePath); err != nil {
+			return fmt.Errorf("failed to change to worktree directory %s: %w", sess.WorktreePath, err)
 		}
+	}
 
-		msgChan := client.ReceiveMessages(ctx)
-		for msg := range msgChan {
-			switch m := msg.(type) {
-			case *claudecode.AssistantMessage:
-				for _, block := range m.Content {
-					if tb, ok := block.(*claudecode.TextBlock); ok {
-						text := tb.Text
-						fmt.Fprint(os.Stdout, text)
-						fmt.Fprint(outFile, text)
-					}
-				}
-			}
-		}
-		return nil
-	})
+	// Execute claude --resume with the session ID
+	cmd := exec.Command("claude", "--resume", sess.ID)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run claude: %w", err)
+	}
+
+	return nil
 }

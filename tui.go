@@ -126,7 +126,7 @@ func (m Model) View() string {
 			cursor, i, Truncate(sess.Prompt, 20), sess.Status, elapsed, branchInfo, preview))
 	}
 
-	b.WriteString("\n[↑↓] navigate  [enter] attach  [d] delete  [r] refresh  [q] quit\n")
+	b.WriteString("\n[↑↓] navigate  [enter] resume  [d] delete  [r] refresh  [q] quit\n")
 
 	if m.err != nil {
 		b.WriteString(fmt.Sprintf("\nError: %v\n", m.err))
