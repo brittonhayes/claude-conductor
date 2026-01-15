@@ -35,19 +35,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	if len(prompts) == 0 {
-		if err := runTUI(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-		return
+	// Start spawning sessions in background (non-blocking)
+	if len(prompts) > 0 {
+		go func() {
+			if err := spawn(prompts, *useWorktree, *worktreeDir); err != nil {
+				fmt.Fprintf(os.Stderr, "Error spawning sessions: %v\n", err)
+			}
+		}()
 	}
 
-	if err := spawn(prompts, *useWorktree, *worktreeDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
+	// Start TUI immediately
 	if err := runTUI(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -116,50 +113,56 @@ func spawn(prompts []string, useWorktree bool, worktreeDir string) error {
 		return err
 	}
 
+	// Spawn each session concurrently
 	for _, prompt := range prompts {
 		prompt = strings.TrimSpace(prompt)
 		if prompt == "" {
 			continue
 		}
 
-		sess := &Session{
-			ID:      genID(),
-			Prompt:  prompt,
-			Status:  Running,
-			Started: time.Now(),
-		}
+		// Spawn in goroutine for parallel execution
+		go func(p string) {
+			sess := &Session{
+				ID:      genID(),
+				Prompt:  p,
+				Status:  Running,
+				Started: time.Now(),
+			}
 
-		// Generate worktree name and create worktree if enabled
-		if useWorktree {
-			ctx := context.Background()
-			worktreeName, err := generateWorktreeName(ctx, prompt, sess.ID)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to generate worktree name: %v\n", err)
-				// Continue without worktree on error
-			} else {
-				// Create the worktree
-				info, err := createWorktree(worktreeDir, worktreeName, worktreeName)
+			// Generate worktree name and create worktree if enabled
+			if useWorktree {
+				ctx := context.Background()
+				worktreeName, err := generateWorktreeName(ctx, p, sess.ID)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Warning: failed to create worktree: %v\n", err)
+					fmt.Fprintf(os.Stderr, "Warning: failed to generate worktree name: %v\n", err)
 					// Continue without worktree on error
 				} else {
-					sess.WorktreePath = info.Path
-					sess.WorktreeName = info.Name
-					sess.BranchName = info.Branch
-					fmt.Printf("Created worktree: %s (branch: %s)\n", info.Path, info.Branch)
+					// Create the worktree
+					info, err := createWorktree(worktreeDir, worktreeName, worktreeName)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Warning: failed to create worktree: %v\n", err)
+						// Continue without worktree on error
+					} else {
+						sess.WorktreePath = info.Path
+						sess.WorktreeName = info.Name
+						sess.BranchName = info.Branch
+						fmt.Printf("Created worktree: %s (branch: %s)\n", info.Path, info.Branch)
+					}
 				}
 			}
-		}
 
-		if err := mgr.Spawn(sess); err != nil {
-			return err
-		}
+			if err := mgr.Spawn(sess); err != nil {
+				fmt.Fprintf(os.Stderr, "Error spawning session: %v\n", err)
+				return
+			}
 
-		if err := store.Save(sess); err != nil {
-			return err
-		}
+			if err := store.Save(sess); err != nil {
+				fmt.Fprintf(os.Stderr, "Error saving session: %v\n", err)
+				return
+			}
 
-		fmt.Printf("Started: %s (%s)\n", truncate(prompt, 50), sess.ID)
+			fmt.Printf("Started: %s (%s)\n", truncate(p, 50), sess.ID)
+		}(prompt)
 	}
 
 	return nil
