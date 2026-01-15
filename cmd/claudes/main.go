@@ -13,6 +13,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/brittonhayes/claudes"
 )
 
 func main() {
@@ -103,12 +104,12 @@ func spawn(prompts []string, useWorktree bool, worktreeDir string) error {
 		worktreeDir = filepath.Join(home, ".claudes-work")
 	}
 
-	store, err := NewStore(sessionDir)
+	store, err := claudes.NewStore(sessionDir)
 	if err != nil {
 		return err
 	}
 
-	mgr, err := NewManager(outputDir)
+	mgr, err := claudes.NewManager(outputDir)
 	if err != nil {
 		return err
 	}
@@ -122,23 +123,23 @@ func spawn(prompts []string, useWorktree bool, worktreeDir string) error {
 
 		// Spawn in goroutine for parallel execution
 		go func(p string) {
-			sess := &Session{
+			sess := &claudes.Session{
 				ID:      genID(),
 				Prompt:  p,
-				Status:  Running,
+				Status:  claudes.Running,
 				Started: time.Now(),
 			}
 
 			// Generate worktree name and create worktree if enabled
 			if useWorktree {
 				ctx := context.Background()
-				worktreeName, err := generateWorktreeName(ctx, p, sess.ID)
+				worktreeName, err := claudes.GenerateWorktreeName(ctx, p, sess.ID)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Warning: failed to generate worktree name: %v\n", err)
 					// Continue without worktree on error
 				} else {
 					// Create the worktree
-					info, err := createWorktree(worktreeDir, worktreeName, worktreeName)
+					info, err := claudes.CreateWorktree(worktreeDir, worktreeName, worktreeName)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Warning: failed to create worktree: %v\n", err)
 						// Continue without worktree on error
@@ -161,7 +162,7 @@ func spawn(prompts []string, useWorktree bool, worktreeDir string) error {
 				return
 			}
 
-			fmt.Printf("Started: %s (%s)\n", truncate(p, 50), sess.ID)
+			fmt.Printf("Started: %s (%s)\n", claudes.Truncate(p, 50), sess.ID)
 		}(prompt)
 	}
 
@@ -178,25 +179,25 @@ func runTUI() error {
 	sessionDir := filepath.Join(baseDir, "sessions")
 	outputDir := filepath.Join(baseDir, "outputs")
 
-	store, err := NewStore(sessionDir)
+	store, err := claudes.NewStore(sessionDir)
 	if err != nil {
 		return err
 	}
 
-	mgr, err := NewManager(outputDir)
+	mgr, err := claudes.NewManager(outputDir)
 	if err != nil {
 		return err
 	}
 
 	for {
-		m := New(store, mgr)
+		m := claudes.NewModel(store, mgr)
 		p := tea.NewProgram(m)
 		final, err := p.Run()
 		if err != nil {
 			return err
 		}
 
-		model := final.(Model)
+		model := final.(claudes.Model)
 		if model.Attach() == nil {
 			break
 		}

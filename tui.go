@@ -1,4 +1,4 @@
-package main
+package claudes
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func tick() tea.Cmd {
 	})
 }
 
-func New(store *Store, agent *Manager) Model {
+func NewModel(store *Store, agent *Manager) Model {
 	return Model{
 		store: store,
 		agent: agent,
@@ -119,11 +119,11 @@ func (m Model) View() string {
 		// Add branch info if worktree is used
 		branchInfo := ""
 		if sess.BranchName != "" {
-			branchInfo = fmt.Sprintf(" [%s]", truncate(sess.BranchName, 30))
+			branchInfo = fmt.Sprintf(" [%s]", Truncate(sess.BranchName, 30))
 		}
 
 		b.WriteString(fmt.Sprintf("%s %d  %-20s  %-10s  %8s%s  %s\n",
-			cursor, i, truncate(sess.Prompt, 20), sess.Status, elapsed, branchInfo, preview))
+			cursor, i, Truncate(sess.Prompt, 20), sess.Status, elapsed, branchInfo, preview))
 	}
 
 	b.WriteString("\n[↑↓] navigate  [enter] attach  [d] delete  [r] refresh  [q] quit\n")
@@ -135,7 +135,7 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func truncate(s string, max int) string {
+func Truncate(s string, max int) string {
 	if len(s) <= max {
 		return s
 	}

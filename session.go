@@ -1,4 +1,4 @@
-package main
+package claudes
 
 import (
 	"encoding/json"
@@ -85,7 +85,7 @@ func (s *Store) Delete(id string) error {
 	sess, err := s.Load(id)
 	if err == nil && sess.WorktreePath != "" {
 		// Try to remove the worktree, but don't fail if it errors
-		removeWorktree(sess.WorktreePath)
+		RemoveWorktree(sess.WorktreePath)
 	}
 
 	path := filepath.Join(s.dir, id+".json")

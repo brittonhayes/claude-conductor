@@ -1,4 +1,4 @@
-package main
+package claudes
 
 import (
 	"context"
@@ -18,10 +18,10 @@ type WorktreeInfo struct {
 	Path   string // Full path to the worktree directory
 }
 
-// generateWorktreeName uses Claude SDK to generate a unique worktree name
+// GenerateWorktreeName uses Claude SDK to generate a unique worktree name
 // To use Haiku model for faster, cost-effective name generation, set:
 //   export ANTHROPIC_MODEL=claude-haiku-4
-func generateWorktreeName(ctx context.Context, prompt string, sessionID string) (string, error) {
+func GenerateWorktreeName(ctx context.Context, prompt string, sessionID string) (string, error) {
 	var generatedName string
 
 	// Create a prompt for Claude to generate a short, descriptive name
@@ -108,8 +108,8 @@ func sanitizeBranchName(name string) string {
 	return name
 }
 
-// createWorktree creates a git worktree with the specified branch
-func createWorktree(baseDir, branchName, worktreeName string) (*WorktreeInfo, error) {
+// CreateWorktree creates a git worktree with the specified branch
+func CreateWorktree(baseDir, branchName, worktreeName string) (*WorktreeInfo, error) {
 	// Get the current branch as the starting point
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	output, err := cmd.Output()
@@ -137,8 +137,8 @@ func createWorktree(baseDir, branchName, worktreeName string) (*WorktreeInfo, er
 	}, nil
 }
 
-// removeWorktree removes a git worktree
-func removeWorktree(path string) error {
+// RemoveWorktree removes a git worktree
+func RemoveWorktree(path string) error {
 	cmd := exec.Command("git", "worktree", "remove", path)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to remove worktree: %w", err)
